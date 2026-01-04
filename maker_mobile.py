@@ -219,23 +219,33 @@ if available_exams:
 # [5] 메인 실행 (PDF 생성 - logic.py 사용)
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
-if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+정답)", type="primary", use_container_width=True):
-    if valid_count == 0: st.warning("문제를 선택해주세요.")
+
+# 1. 생성 버튼 클릭 시 로직
+if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="primary", use_container_width=True):
+    if valid_count == 0:
+        st.warning("문제를 선택해주세요.")
     else:
-        # [핵심] logic.py의 함수를 호출하여 PDF 데이터를 받아옵니다.
+        # logic.py 호출
         prog = st.progress(0)
         
-        # 문제지 생성 (logic.py 사용)
-        prob_pdf = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
+        # 생성 후 세션 상태에 저장
+        st.session_state['prob_pdf'] = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
+        st.session_state['ans_pdf'] = logic.create_answer_pdf(user_selections, custom_title)
+        st.session_state['safe_name'] = custom_title.strip()
+        st.session_state['generated'] = True
         
-        # 정답지 생성 (logic.py 사용)
-        ans_pdf = logic.create_answer_pdf(user_selections, custom_title)
-        
-        b64_prob = base64.b64encode(prob_pdf).decode()
-        b64_ans = base64.b64encode(ans_pdf).decode()
-        safe_name = custom_title.strip()
-        
-        c_d1, c_d2 = st.columns(2)
-        c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
-        c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_정답.pdf", "application/pdf", use_container_width=True)
-        st.success("생성 완료!")
+        st.success("생성 완료! 아래 버튼을 눌러 다운로드하세요.")
+
+# 2. 파일이 생성되어 있다면 다운로드 버튼 표시
+if st.session_state.get('generated', False):
+    prob_pdf = st.session_state['prob_pdf']
+    ans_pdf = st.session_state['ans_pdf']
+    safe_name = st.session_state['safe_name']
+    
+    st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
+    
+    c_d1, c_d2 = st.columns(2)
+    c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
+    c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_해설.pdf", "application/pdf", use_container_width=True)
+    
+    st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
