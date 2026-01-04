@@ -20,30 +20,20 @@ font="sans serif"
 
 st.set_page_config(layout="wide", page_title="모바일 기출 생성기", initial_sidebar_state="collapsed")
 
-# [1] CSS 스타일 (모바일 최적화 + 정렬 오류 수정)
+# [1] CSS 스타일 (모바일 전용 디자인)
 st.markdown("""
 <style>
-    /* 1. UI 초기화 및 스크롤 설정 */
+    /* 1. 기본 UI 초기화 */
     header[data-testid="stHeader"] { display: none !important; }
     footer { display: none !important; }
-    
-    html, body, .stApp {
-        height: auto !important; 
-        min-height: 100% !important;
-        overflow-y: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        touch-action: pan-y !important;
-    }
-
     .block-container { 
         padding-top: 1.5rem !important; 
         padding-bottom: 5rem; 
         padding-left: 1rem !important;
         padding-right: 1rem !important;
-        overflow: visible !important;
     }
     
-    /* 2. 문항 헤더 */
+    /* 2. 문항 헤더 (심플 텍스트 스타일) */
     .slot-header { 
         background-color: transparent !important; 
         color: #000000 !important;                
@@ -67,10 +57,10 @@ st.markdown("""
         line-height: 1;
     }
     
-    /* 3. [CSS 수정] 입력창 안전한 중앙 정렬 */
+    /* 3. [수정] 입력창 중앙 정렬 강화 */
     .stSelectbox label { display: none !important; }
     
-    /* 입력창 박스 */
+    /* 입력창 외곽 박스 */
     div[data-baseweb="select"] > div {
         background-color: #f8f9fa !important;
         border-color: #e0e0e0 !important;
@@ -79,45 +69,35 @@ st.markdown("""
         height: 45px !important;
         display: flex !important;
         align-items: center !important;
-        justify-content: center !important;
-        position: relative !important;
+        justify-content: center !important; /* 전체 중앙 정렬 */
     }
     
-    /* 텍스트 컨테이너 (absolute 제거 -> flex 사용) */
+    /* [핵심] 텍스트를 감싸는 내부 컨테이너까지 강제 중앙 정렬 */
     div[data-baseweb="select"] > div > div:first-child {
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
         width: 100% !important;
+        margin: 0 auto !important;
         padding: 0 !important;
-        
-        /* [핵심] 오른쪽 아이콘 공간만큼 왼쪽에도 여백을 줘서 시각적 중앙을 맞춤 */
-        padding-left: 20px !important; 
-        padding-right: 20px !important; 
     }
 
-    /* 텍스트 스팬 */
+    /* 실제 텍스트 스팬 */
     div[data-baseweb="select"] span {
         font-size: 14px !important;
         color: #333;
         text-align: center !important;
         width: 100% !important;
-        white-space: nowrap !important; /* 줄바꿈 방지 */
-        overflow: hidden !important;
-        text-overflow: ellipsis !important;
+        display: block !important;
+        margin: 0 auto !important;
     }
     
-    /* 화살표 아이콘 (절대 위치로 오른쪽 고정) */
+    /* 우측 화살표 아이콘 미세 조정 */
     div[data-baseweb="select"] svg {
-        position: absolute !important;
-        right: 8px !important; 
-        top: 50% !important;
-        transform: translateY(-50%) !important;
-        z-index: 5 !important;
-        margin: 0 !important;
+        margin-left: 5px !important;
     }
 
-    /* 4. 입력창 */
+    /* 4. 오답노트 이름 입력창 */
     .stTextInput input {
         text-align: center;
         min-height: 45px;
@@ -126,7 +106,16 @@ st.markdown("""
         font-weight: 600;
     }
 
-    /* 5. 버튼 스타일 */
+    /* 5. 토글 스위치 */
+    div[data-testid="stColumn"] label[data-baseweb="checkbox"] {
+        white-space: nowrap !important;
+    }
+    div[data-testid="stColumn"] {
+        min-width: 0 !important;
+        flex: 1 1 auto !important;
+    }
+
+    /* 6. 버튼 스타일 */
     button[kind="secondary"] {
         height: 55px !important;
         border-radius: 12px !important;
@@ -145,8 +134,6 @@ st.markdown("""
         background-color: #fff5f5 !important;
         border-color: #ff4b4b !important;
     }
-    
-    /* [복귀] 정품 다운로드 버튼 스타일링 */
     button[kind="primary"] {
         background-color: #0614c1 !important; 
         border-color: #0614c1 !important;
@@ -154,20 +141,11 @@ st.markdown("""
         font-size: 18px !important;
         font-weight: 800 !important;
         border-radius: 12px !important;
-        margin-top: 0px !important;
-        width: 100% !important;
+        margin-top: 15px !important;
     }
     button[kind="primary"]:hover {
         background-color: #040e94 !important;
         border-color: #040e94 !important;
-    }
-    
-    /* 다운로드 버튼 (흰색 배경 스타일 덮어쓰기) */
-    div[data-testid="column"] button[kind="primary"] {
-        background-color: #ffffff !important;
-        color: #333333 !important;
-        border: 2px solid #e0e0e0 !important;
-        font-size: 16px !important;
     }
 
     [data-testid="stVerticalBlock"] { gap: 0rem !important; }
@@ -181,6 +159,7 @@ def increase_q(): st.session_state.target_q_count += 1
 def decrease_q():
     if st.session_state.target_q_count > 1: st.session_state.target_q_count -= 1
 
+# [NEW] 과목 변경 시 아래쪽 과목도 모두 따라가게 하는 함수
 def on_subject_change(idx):
     if f"subj_{idx}" in st.session_state:
         new_subj = st.session_state[f"subj_{idx}"]
@@ -188,14 +167,17 @@ def on_subject_change(idx):
             for k in range(idx + 1, st.session_state.target_q_count + 1):
                 st.session_state[f"subj_{k}"] = new_subj
 
+# 기존 년도 변경 함수
 def on_year_change(idx):
     if f"y_{idx}" in st.session_state:
         ny = st.session_state[f"y_{idx}"]
         if ny != "년도":
             for k in range(idx + 1, st.session_state.target_q_count + 1): st.session_state[f"y_{k}"] = ny
 
-# [3] 데이터 로드
+# [3] 데이터 로드 (logic.py)
 available_exams = logic.get_available_exams()
+
+# [NEW] 과목 리스트 정의
 subject_list = ["과목", "추리논증"]
 
 # [4] UI 구성
@@ -220,16 +202,36 @@ if available_exams:
         </div>
         """, unsafe_allow_html=True)
         
-        col_subj, col_y, col_n = st.columns([1.2, 1, 1], gap="small")
+        # 3단 컬럼 구성 (과목 - 년도 - 번호)
+        col_subj, col_y, col_n = st.columns([1, 0.8, 1], gap="small")
         
+        # 1. 과목 선택
         with col_subj:
-            subj = st.selectbox("subject", subject_list, key=f"subj_{i}", label_visibility="collapsed", on_change=on_subject_change, args=(i,))
+            subj = st.selectbox(
+                "subject", subject_list,
+                key=f"subj_{i}",
+                label_visibility="collapsed",
+                on_change=on_subject_change, args=(i,)
+            )
+
+        # 2. 년도 선택
         with col_y:
-            y = st.selectbox("y", years_list, key=f"y_{i}", label_visibility="collapsed", on_change=on_year_change, args=(i,))
+            y = st.selectbox(
+                "y", years_list, 
+                key=f"y_{i}", 
+                label_visibility="collapsed", 
+                on_change=on_year_change, args=(i,)
+            )
+            
+        # 3. 문항 번호 선택
         with col_n:
             if subj != "과목" and y != "년도":
                 mv = 35 if y.split()[0] in ['2017','2018'] else 40
-                n_str = st.selectbox("n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], key=f"n_{i}", label_visibility="collapsed")
+                n_str = st.selectbox(
+                    "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
+                    key=f"n_{i}", 
+                    label_visibility="collapsed"
+                )
                 if n_str != "문항 번호":
                     user_selections[i] = (y, int(n_str.replace("번", "")))
             else:
@@ -248,18 +250,18 @@ if available_exams:
         else:
             st.button("－", disabled=True, use_container_width=True)
 
-# [5] 메인 실행 및 다운로드 (정품 버튼 + 세션 유지)
+# [5] 메인 실행 및 다운로드 로직 (Session State 적용)
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
 
-# 생성 버튼 (파란색)
-# 여기서는 CSS를 타지 않고 원래의 primary 스타일을 유지하도록 별도 div로 감싸지 않음
+# 1. 생성 버튼 클릭 시 로직
 if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="primary", use_container_width=True):
     if valid_count == 0:
         st.warning("문제를 선택해주세요.")
     else:
+        # logic.py 호출
         prog = st.progress(0)
-        # PDF 생성 및 세션 저장
+        
         st.session_state['prob_pdf'] = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
         st.session_state['ans_pdf'] = logic.create_answer_pdf(user_selections, custom_title)
         st.session_state['safe_name'] = custom_title.strip()
@@ -267,7 +269,7 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="prima
         
         st.success("생성 완료! 아래 버튼을 눌러 다운로드하세요.")
 
-# 다운로드 버튼 (흰색)
+# 2. 파일이 생성되어 있다면 다운로드 버튼 표시
 if st.session_state.get('generated', False):
     prob_pdf = st.session_state['prob_pdf']
     ans_pdf = st.session_state['ans_pdf']
@@ -275,28 +277,8 @@ if st.session_state.get('generated', False):
     
     st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
     
-    c_d1, c_d2 = st.columns(2, gap="small")
-    
-    # st.download_button 사용 (안정성 확보)
-    # 위 CSS에서 div[data-testid="column"] button[kind="primary"] 선택자로 흰색 스타일 적용됨
-    c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", type="primary", use_container_width=True)
-    c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_해설.pdf", "application/pdf", type="primary", use_container_width=True)
+    c_d1, c_d2 = st.columns(2)
+    c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
+    c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_해설.pdf", "application/pdf", use_container_width=True)
     
     st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
-
-# [6] 자동 높이 조절 스크립트
-components.html("""
-<script>
-    function resizeIframe() {
-        const body = document.body;
-        const html = document.documentElement;
-        const height = Math.max(
-            body.scrollHeight, body.offsetHeight,
-            html.clientHeight, html.scrollHeight, html.offsetHeight
-        );
-        window.parent.postMessage({type: 'streamlit:resize', height: height}, '*');
-    }
-    setInterval(resizeIframe, 500);
-    window.onload = resizeIframe;
-</script>
-""", height=0)
