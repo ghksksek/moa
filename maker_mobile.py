@@ -224,9 +224,19 @@ if available_exams:
             )
             
         # 3. 문항 번호 선택
+        # 3. 문항 번호 선택
         with col_n:
             if subj != "과목" and y != "년도":
-                mv = 35 if y.split()[0] in ['2017','2018'] else 40
+                # [로직 수정] 기본 40문제
+                mv = 40
+                
+                y_str = y.split()[0]
+                
+                if y_str.isdigit():
+                    y_int = int(y_str)
+                    if 2010 <= y_int <= 2018:
+                        mv = 35
+                
                 n_str = st.selectbox(
                     "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
                     key=f"n_{i}", 

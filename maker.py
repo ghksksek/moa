@@ -280,7 +280,19 @@ if available_exams:
             # 3. 문항 번호
             with input_cols[2]:
                 if subj != "과목" and y != "년도":
-                    mv = 35 if y.split()[0] in ['2017','2018'] else 40
+                    # [로직 수정] 기본 40문제 (예비, 2009, 2019~2026 포함)
+                    mv = 40
+                    
+                    # 년도 텍스트에서 숫자 부분만 추출
+                    y_str = y.split()[0] 
+                    
+                    # 숫자로 변환 가능한 경우(년도)만 체크, "예비"는 여기서 걸러져서 40문제 유지
+                    if y_str.isdigit():
+                        y_int = int(y_str)
+                        # 2010년부터 2018년까지만 35문제
+                        if 2010 <= y_int <= 2018:
+                            mv = 35
+                    
                     n_str = st.selectbox(
                         "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
                         key=f"n_{i}", 

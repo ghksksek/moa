@@ -22,15 +22,29 @@ def get_available_exams():
     for sub_code, sub_name in subjects.items():
         sub_path = os.path.join(base_path, sub_code)
         if os.path.exists(sub_path):
-            for year in [f for f in os.listdir(sub_path) if os.path.isdir(os.path.join(sub_path, f))]:
-                # 추리만 꼬리표 떼기 (확장성 유지)
+            # 폴더 목록 읽기
+            folders = [f for f in os.listdir(sub_path) if os.path.isdir(os.path.join(sub_path, f))]
+            
+            for year in folders:
+                # [확장성] 추리만 꼬리표 떼기
                 if sub_name == "추리":
                     key_name = year
                 else:
                     key_name = f"{year} ({sub_name})"
                 exams[key_name] = f"leet/{sub_code}/{year}"
-                
-    return dict(sorted(exams.items(), reverse=True))
+    
+    # [정렬 로직 수정] 예비 -> 2009 -> ... -> 2026 순서 (예비를 맨 뒤로, 혹은 맨 앞으로? 보통 년도 역순이므로 예비는 가장 옛날)
+    def sort_key(item):
+        k = item[0]
+        if "예비" in k:
+            return -1  # 숫자로 변환 안 되므로 -1 (가장 과거 취급)
+        try:
+            return int(k.split()[0])
+        except:
+            return 0 # 알 수 없는 문자는 0
+
+    # 내림차순 정렬 (2026 -> ... -> 2009 -> 예비)
+    return dict(sorted(exams.items(), key=sort_key, reverse=True))
 
 # [2] 폰트 경로 설정
 def get_fonts():
@@ -103,7 +117,7 @@ def create_answer_pdf(selections, title):
         if q_n in selections:
             y_k, _ = selections[q_n]
             
-            # 스마트 키 매칭 (순수 키 -> (추리) 키)
+            # [정답 찾기] 순수 키 -> 실패시 (추리) 부착
             row_data = answer_db.get(y_k)
             if not row_data:
                 row_data = answer_db.get(f"{y_k} (추리)", {})
@@ -115,7 +129,7 @@ def create_answer_pdf(selections, title):
 
     return doc.write()
 
-# [4] 문제지 PDF 생성 로직 (PNG 고화질 적용)
+# [4] 문제지 PDF 생성 로직 (PNG + _2.png 연달아 배치 + Z패턴 고정)
 def create_problem_pdf(user_selections, title, show_source, one_q_per_row, available_exams, progress_bar=None):
     final_font_path, title_font_path = get_fonts()
     
@@ -155,23 +169,43 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
     pg_cnt = 0
     curr_page = None
     
-    p_idx = 0
+    # [중요] 슬롯(칸) 인덱스: 0(왼쪽), 1(오른쪽), 2(다음페이지 왼쪽)...
+    slot_idx = 0 
+    
+    # 진행률 표시용
+    q_progress_idx = 0
     valid_count = len(user_selections)
 
     for i in sorted(user_selections.keys()):
         y_display, sn = user_selections[i]
         
+        # 폴더 경로 찾기
         folder_path = available_exams.get(y_display)
         if not folder_path:
             folder_path = available_exams.get(f"{y_display} (추리)", "")
             
         if not folder_path: continue
 
-        # [수정 1] 원본 파일 확장자를 .png로 변경
-        ip = f"output/{folder_path}/{sn:02d}.png"
+        # [이미지 수집] 기본 문제 + (있다면) 두 번째 페이지(_2)
+        images_to_process = []
         
-        if os.path.exists(ip):
-            with Image.open(ip) as pim:
+        # 기본: 09.png
+        img_1 = f"output/{folder_path}/{sn:02d}.png"
+        if os.path.exists(img_1):
+            images_to_process.append(img_1)
+            
+            # 이어지는 문제 확인: 09_2.png 또는 09_02.png
+            img_2_a = f"output/{folder_path}/{sn:02d}_2.png"
+            img_2_b = f"output/{folder_path}/{sn:02d}_02.png"
+            
+            if os.path.exists(img_2_a):
+                images_to_process.append(img_2_a)
+            elif os.path.exists(img_2_b):
+                images_to_process.append(img_2_b)
+        
+        # [배치 로직] 수집된 이미지들을 순서대로 슬롯에 배치
+        for img_path in images_to_process:
+            with Image.open(img_path) as pim:
                 sw, sh = pim.size
                 ih = sh * (COL_W / sw)
                 hh = 20 if show_source else 0
@@ -180,16 +214,21 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                 is_left_col = False
                 
                 if one_q_per_row:
+                    # 1쪽 1문항 옵션: 매번 새 페이지
                     is_new_page = True
                     is_left_col = True
+                    # 슬롯 인덱스도 강제로 짝수(왼쪽)로 맞춤 (페이지 넘김 효과)
+                    if slot_idx % 2 != 0: slot_idx += 1 
                 else:
-                    if p_idx % 2 == 0:
+                    # Z패턴: 슬롯 인덱스가 짝수면 왼쪽(새페이지), 홀수면 오른쪽
+                    if slot_idx % 2 == 0:
                         is_new_page = True
                         is_left_col = True
                     else:
                         is_new_page = False
                         is_left_col = False
                 
+                # 새 페이지 생성
                 if is_new_page:
                     pg_cnt += 1
                     curr_page = doc.new_page(width=PW, height=PH)
@@ -197,14 +236,11 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                     curr_page.draw_line((PW/2, START_Y), (PW/2, PH-FOOTER_H), color=(0.8,0.8,0.8), width=0.5)
                 
                 cy = START_Y
-                
-                if is_left_col:
-                    cx = MARGIN
-                else:
-                    cx = MARGIN + COL_W + COL_GAP
+                cx = MARGIN if is_left_col else MARGIN + COL_W + COL_GAP
                 
                 iy = cy
                 if show_source:
+                    # _2 파일인 경우 출처 표시에 (2) 등을 붙일 수도 있으나, 여기선 깔끔하게 원본 출처 유지
                     t = f"{y_display} LEET {sn}번"
                     if final_font_path: curr_page.insert_text((cx, cy+12), t, fontname=font_alias, fontfile=final_font_path, fontsize=9, color=(0.4,0.4,0.4))
                     else: curr_page.insert_text((cx, cy+12), t, fontsize=9, color=(0.4,0.4,0.4))
@@ -212,7 +248,7 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                 
                 r = fitz.Rect(cx, iy, cx+COL_W, iy+ih)
                 
-                # [수정 2] PDF 삽입 시 포맷을 PNG로 설정 (무손실)
+                # [PNG 포맷 삽입]
                 b = io.BytesIO()
                 pim.save(b, format='PNG') 
                 curr_page.insert_image(r, stream=b.getvalue())
@@ -220,15 +256,20 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                 
                 curr_page.draw_rect(fitz.Rect(cx, iy, cx+19, iy+20), color=(1,1,1), fill=(1,1,1))
                 
+                # 문항 번호 (두 번째 페이지는 번호 생략할지 선택 가능하나, 현재는 일관성 있게 표시)
+                # 만약 _2 페이지에는 번호를 안 붙이고 싶다면 파일명 체크해서 skip 가능
                 ns = f"{i}."
                 if final_font_path:
                     curr_page.insert_text((cx, iy+14), ns, fontname=font_alias, fontfile=final_font_path, fontsize=13, color=(0,0,0))
                     curr_page.insert_text((cx+0.7, iy+14), ns, fontname=font_alias, fontfile=final_font_path, fontsize=13, color=(0,0,0))
                 else: curr_page.insert_text((cx, iy+14), ns, fontsize=13, color=(0,0,0))
+            
+            # 다음 슬롯으로 이동
+            slot_idx += 1
         
-        p_idx += 1
+        q_progress_idx += 1
         if progress_bar:
-            progress_bar.progress(p_idx / valid_count)
+            progress_bar.progress(q_progress_idx / valid_count)
         gc.collect()
     
     tot = len(doc); bw, bh = 60, 24
