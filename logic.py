@@ -135,7 +135,7 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
     
     doc = fitz.open()
     PT = 2.83465; PW = 297.0 * PT; PH = 420.0 * PT; MARGIN = 20 * PT; HEADER_H = 18 * PT; FOOTER_H = 25 * PT
-    COL_GAP = 12 * PT; COL_W = (PW - 2*MARGIN - COL_GAP)/2; START_Y = MARGIN + HEADER_H + 10
+    COL_GAP = 12 * PT; COL_W = (PW - 2*MARGIN - COL_GAP)/2; START_Y = MARGIN + HEADER_H + 8
     font_alias = "my_font"; title_alias = "my_title"
     
     def draw_header(page, pg_num, title_text):
@@ -254,7 +254,7 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                 curr_page.insert_image(r, stream=b.getvalue())
                 b.close()
                 
-                curr_page.draw_rect(fitz.Rect(cx, iy, cx+19, iy+20), color=(1,1,1), fill=(1,1,1))
+                curr_page.draw_rect(fitz.Rect(cx, iy, cx+17, iy+20), color=(1,1,1), fill=(1,1,1))
                 
                 # 문항 번호 (두 번째 페이지는 번호 생략할지 선택 가능하나, 현재는 일관성 있게 표시)
                 # 만약 _2 페이지에는 번호를 안 붙이고 싶다면 파일명 체크해서 skip 가능
