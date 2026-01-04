@@ -23,8 +23,7 @@ def get_available_exams():
         sub_path = os.path.join(base_path, sub_code)
         if os.path.exists(sub_path):
             for year in [f for f in os.listdir(sub_path) if os.path.isdir(os.path.join(sub_path, f))]:
-                # [확장성 고려] 추리만 꼬리표를 떼고, 다른 과목은 붙여서 구분함
-                # 예: 추리 -> "2024", 언어 -> "2024 (언어)"
+                # 추리만 꼬리표 떼기 (확장성 유지)
                 if sub_name == "추리":
                     key_name = year
                 else:
@@ -39,7 +38,7 @@ def get_fonts():
     title_font_path = "SBM.TTF" if os.path.exists("SBM.TTF") else "SBM.ttf" if os.path.exists("SBM.ttf") else None
     return final_font_path, title_font_path
 
-# [3] 정답지 PDF 생성 로직 (스마트 검색 기능 탑재)
+# [3] 정답지 PDF 생성 로직
 def create_answer_pdf(selections, title):
     answer_db = load_answers()
     final_font_path, title_font_path = get_fonts()
@@ -104,14 +103,11 @@ def create_answer_pdf(selections, title):
         if q_n in selections:
             y_k, _ = selections[q_n]
             
-            # [핵심] 정답 데이터 찾기 (호환성 확보)
-            # 1. 먼저 "2024" 같은 순수 키로 찾아봅니다 (미래의 확장된 json 대응)
+            # 스마트 키 매칭 (순수 키 -> (추리) 키)
             row_data = answer_db.get(y_k)
-            
-            # 2. 없으면 "2024 (추리)" 형태로 변형해서 찾아봅니다 (현재의 json 대응)
             if not row_data:
                 row_data = answer_db.get(f"{y_k} (추리)", {})
-                
+            
             raw = row_data.get(str(q_n), {}).get("ans", "?")
             
             page.insert_textbox(get_v_center_rect(q_rect, 11), str(q_n), fontsize=11, fontname=font_name, align=1)
@@ -119,7 +115,7 @@ def create_answer_pdf(selections, title):
 
     return doc.write()
 
-# [4] 문제지 PDF 생성 로직 (1:1 고정 배치 / 절대 좌표 사용)
+# [4] 문제지 PDF 생성 로직 (PNG 고화질 적용)
 def create_problem_pdf(user_selections, title, show_source, one_q_per_row, available_exams, progress_bar=None):
     final_font_path, title_font_path = get_fonts()
     
@@ -165,16 +161,14 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
     for i in sorted(user_selections.keys()):
         y_display, sn = user_selections[i]
         
-        # [핵심] 폴더 경로 찾기 (호환성 확보)
         folder_path = available_exams.get(y_display)
         if not folder_path:
-            # 1. 순수 년도 키로 못 찾았으면
-            # 2. "(추리)" 붙여서 다시 찾아봄
             folder_path = available_exams.get(f"{y_display} (추리)", "")
             
         if not folder_path: continue
 
-        ip = f"output/{folder_path}/{sn:02d}.jpg"
+        # [수정 1] 원본 파일 확장자를 .png로 변경
+        ip = f"output/{folder_path}/{sn:02d}.png"
         
         if os.path.exists(ip):
             with Image.open(ip) as pim:
@@ -217,8 +211,13 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                     iy += hh
                 
                 r = fitz.Rect(cx, iy, cx+COL_W, iy+ih)
-                b = io.BytesIO(); pim.save(b, format='JPEG', quality=90)
-                curr_page.insert_image(r, stream=b.getvalue()); b.close()
+                
+                # [수정 2] PDF 삽입 시 포맷을 PNG로 설정 (무손실)
+                b = io.BytesIO()
+                pim.save(b, format='PNG') 
+                curr_page.insert_image(r, stream=b.getvalue())
+                b.close()
+                
                 curr_page.draw_rect(fitz.Rect(cx, iy, cx+19, iy+20), color=(1,1,1), fill=(1,1,1))
                 
                 ns = f"{i}."
