@@ -4,7 +4,7 @@ import base64
 import os
 import logic  # [핵심] 공통 로직 모듈 불러오기
 
-# [0] 테마 및 설정 (PC용 레이아웃 설정)
+# [0] 테마 및 설정
 config_dir = ".streamlit"
 if not os.path.exists(config_dir):
     os.makedirs(config_dir)
@@ -20,14 +20,14 @@ font="sans serif"
 
 st.set_page_config(layout="wide", page_title="기출 연습서 생성기", initial_sidebar_state="collapsed")
 
-# [1] CSS 스타일 (PC 전용 디자인 유지)
+# [1] CSS 스타일 (PC 전용)
 st.markdown("""
 <style>
     /* 1. 기본 UI 초기화 */
     header, footer { display: none !important; }
     
     .block-container {
-        max-width: 700px !important;
+        max-width: 1000px !important; /* [수정] 너비를 1000px로 확장 */
         width: 100% !important;
         padding: 2rem 10px 5rem 10px !important;
         margin: 0 auto !important;
@@ -96,8 +96,6 @@ st.markdown("""
     .stSelectbox label, .stTextInput label { display: none !important; }
     
     /* 3. 좌측 라벨 디자인 */
-    
-    /* (A) 일반 문항 */
     .q-label-container {
         display: flex;
         align-items: flex-start; 
@@ -114,7 +112,6 @@ st.markdown("""
         white-space: nowrap; 
     }
 
-    /* (B) 마지막 문항 전용 */
     .q-label-container-last {
         display: flex;
         align-items: flex-start; 
@@ -201,23 +198,34 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# [2] 세션 및 데이터 (logic.py 사용)
+# [2] 세션 및 데이터
 if 'target_q_count' not in st.session_state: st.session_state.target_q_count = 5 
 def increase_q(): st.session_state.target_q_count += 1
 def decrease_q():
     if st.session_state.target_q_count > 1: st.session_state.target_q_count -= 1
 
+# [NEW] 과목 연동 함수
+def on_subject_change(idx):
+    if f"subj_{idx}" in st.session_state:
+        new_subj = st.session_state[f"subj_{idx}"]
+        if new_subj != "과목":
+            for k in range(idx + 1, st.session_state.target_q_count + 1):
+                st.session_state[f"subj_{k}"] = new_subj
+
+# 기존 년도 연동 함수
 def on_year_change(idx):
     if f"y_{idx}" in st.session_state:
         ny = st.session_state[f"y_{idx}"]
         if ny != "년도":
             for k in range(idx + 1, st.session_state.target_q_count + 1): st.session_state[f"y_{k}"] = ny
 
+# 데이터 로드
 available_exams = logic.get_available_exams()
+subject_list = ["과목", "추리논증"]
 
 # [3] UI 구성
 c1, c2 = st.columns([1, 1])
-with c1: 
+with c1:
     raw_title = st.text_input("custom_title_input", placeholder="오답노트 이름", label_visibility="collapsed")
     custom_title = raw_title if raw_title else "나만의 기출 모음집"
 
@@ -248,9 +256,20 @@ if available_exams:
             """, unsafe_allow_html=True)
         
         with row_cols[1]:
-            input_cols = st.columns([1, 1], gap="small")
+            # [수정] 3단 컬럼: 과목(1.2) - 년도(1) - 문항(1)
+            input_cols = st.columns([1, 1, 1], gap="small")
             
+            # 1. 과목
             with input_cols[0]:
+                subj = st.selectbox(
+                    "subject", subject_list,
+                    key=f"subj_{i}",
+                    label_visibility="collapsed",
+                    on_change=on_subject_change, args=(i,)
+                )
+
+            # 2. 년도
+            with input_cols[1]:
                 y = st.selectbox(
                     "y", years_list, 
                     key=f"y_{i}", 
@@ -258,8 +277,9 @@ if available_exams:
                     on_change=on_year_change, args=(i,)
                 )
             
-            with input_cols[1]:
-                if y != "년도":
+            # 3. 문항 번호
+            with input_cols[2]:
+                if subj != "과목" and y != "년도":
                     mv = 35 if y.split()[0] in ['2017','2018'] else 40
                     n_str = st.selectbox(
                         "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
@@ -279,26 +299,21 @@ if available_exams:
     
     with btn_row_cols[0]:
         st.empty() 
-        
     with btn_row_cols[1]:
         btn_input_cols = st.columns([1, 1], gap="small")
-        
         with btn_input_cols[0]:
             st.markdown('<div class="add-btn">', unsafe_allow_html=True)
             if st.button("＋", key="add_btn", use_container_width=True):
-                increase_q()
-                st.rerun()
+                increase_q(); st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
-
         with btn_input_cols[1]:
             if st.session_state.target_q_count > 1:
                 if st.button("－", key="del_btn", type="secondary", use_container_width=True):
-                    decrease_q()
-                    st.rerun()
+                    decrease_q(); st.rerun()
             else:
                 st.button("－", disabled=True, use_container_width=True)
 
-# [4] PDF 생성 및 다운로드 (logic.py 사용)
+# [5] 메인 실행 및 다운로드 로직 (Session State 적용)
 st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
 
@@ -307,29 +322,28 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+정답)", type="prima
     if valid_count == 0:
         st.warning("문제를 선택해주세요.")
     else:
-        # 로직 분리 (logic.py 호출)
         prog = st.progress(0)
         
-        # 생성 후 세션 상태(Session State)에 저장
         st.session_state['prob_pdf'] = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
         st.session_state['ans_pdf'] = logic.create_answer_pdf(user_selections, custom_title)
         st.session_state['safe_name'] = custom_title.strip()
-        st.session_state['generated'] = True # 생성 완료 플래그
+        st.session_state['generated'] = True 
         
         st.success("생성 완료! 아래 버튼을 눌러 다운로드하세요.")
 
-# 2. 파일이 생성되어 있다면 다운로드 버튼 표시 (새로고침 되어도 유지됨)
+# 2. 파일이 생성되어 있다면 다운로드 버튼 표시
 if st.session_state.get('generated', False):
     prob_pdf = st.session_state['prob_pdf']
     ans_pdf = st.session_state['ans_pdf']
     safe_name = st.session_state['safe_name']
     
-    # [1] 생성 버튼과 다운로드 버튼 사이 여백
+    # 여백
     st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
     
     c_d1, c_d2 = st.columns(2)
     c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
     c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_정답.pdf", "application/pdf", use_container_width=True)
     
-    # [2] 다운로드 버튼과 하단 여백
+    # 여백
     st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
+    st.success("생성 완료!")

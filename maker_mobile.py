@@ -203,7 +203,7 @@ if available_exams:
         """, unsafe_allow_html=True)
         
         # 3단 컬럼 구성 (과목 - 년도 - 번호)
-        col_subj, col_y, col_n = st.columns([1, 1, 1], gap="small")
+        col_subj, col_y, col_n = st.columns([1, 0.8, 1], gap="small")
         
         # 1. 과목 선택
         with col_subj:
