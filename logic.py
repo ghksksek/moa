@@ -257,14 +257,24 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                 
                 r = fitz.Rect(cx, iy, cx+COL_W, iy+ih)
                 
+# [수정 전]
+                # b = io.BytesIO()
+                # pim.save(b, format='PNG') 
+                # curr_page.insert_image(r, stream=b.getvalue())
+                # b.close()
+
+                # [수정 후] 용량 문제 해결 코드 (고화질 JPEG 압축)
                 b = io.BytesIO()
-                pim.save(b, format='PNG') 
+                # PNG의 투명도 정보를 제거하고 RGB로 변환 (JPEG 저장을 위해 필수)
+                rgb_im = pim.convert('RGB')
+                # quality=95로 설정하면 화질 저하는 눈으로 구별 불가하지만 용량은 확 줄어듭니다.
+                rgb_im.save(b, format='JPEG', quality=95) 
                 curr_page.insert_image(r, stream=b.getvalue())
                 b.close()
                 
                 if not is_continuation:
                     # 지우개
-                    curr_page.draw_rect(fitz.Rect(cx, iy, cx+17, iy+20), color=(1,1,1), fill=(1,1,1))
+                    curr_page.draw_rect(fitz.Rect(cx, iy, cx+18, iy+20), color=(1,1,1), fill=(1,1,1))
                     
                     # 번호
                     ns = f"{i}."
