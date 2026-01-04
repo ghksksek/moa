@@ -57,10 +57,9 @@ st.markdown("""
         line-height: 1;
     }
     
-    /* 3. [수정] 입력창 중앙 정렬 강화 */
+    /* 3. 입력창 중앙 정렬 강화 */
     .stSelectbox label { display: none !important; }
     
-    /* 입력창 외곽 박스 */
     div[data-baseweb="select"] > div {
         background-color: #f8f9fa !important;
         border-color: #e0e0e0 !important;
@@ -69,10 +68,10 @@ st.markdown("""
         height: 45px !important;
         display: flex !important;
         align-items: center !important;
-        justify-content: center !important; /* 전체 중앙 정렬 */
+        justify-content: center !important;
+        position: relative !important;
     }
     
-    /* [핵심] 텍스트를 감싸는 내부 컨테이너까지 강제 중앙 정렬 */
     div[data-baseweb="select"] > div > div:first-child {
         display: flex !important;
         align-items: center !important;
@@ -80,21 +79,24 @@ st.markdown("""
         width: 100% !important;
         margin: 0 auto !important;
         padding: 0 !important;
+        position: absolute !important;
+        left: 0 !important;
+        right: 0 !important;
     }
 
-    /* 실제 텍스트 스팬 */
     div[data-baseweb="select"] span {
         font-size: 14px !important;
         color: #333;
         text-align: center !important;
         width: 100% !important;
         display: block !important;
-        margin: 0 auto !important;
     }
     
-    /* 우측 화살표 아이콘 미세 조정 */
     div[data-baseweb="select"] svg {
-        margin-left: 5px !important;
+        position: absolute !important;
+        right: 10px !important;
+        z-index: 10 !important;
+        margin: 0 !important;
     }
 
     /* 4. 오답노트 이름 입력창 */
@@ -115,7 +117,7 @@ st.markdown("""
         flex: 1 1 auto !important;
     }
 
-    /* 6. 버튼 스타일 */
+    /* 6. 버튼 스타일 (기존 Streamlit 버튼) */
     button[kind="secondary"] {
         height: 55px !important;
         border-radius: 12px !important;
@@ -143,9 +145,38 @@ st.markdown("""
         border-radius: 12px !important;
         margin-top: 15px !important;
     }
-    button[kind="primary"]:hover {
-        background-color: #040e94 !important;
-        border-color: #040e94 !important;
+    
+    /* 7. [NEW] HTML 다운로드 링크 버튼 스타일 */
+    /* 기존 버튼과 똑같이 생겼지만, 실제로는 <a> 태그입니다 */
+    .dwn-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 55px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 16px;
+        text-decoration: none !important;
+        margin-top: 0px;
+        box-sizing: border-box;
+        cursor: pointer;
+        line-height: 1.2;
+        text-align: center;
+    }
+    .dwn-btn:hover {
+        text-decoration: none !important;
+        opacity: 0.9;
+    }
+    /* 흰색 배경 버튼 (기존 secondary 스타일) */
+    .dwn-white {
+        background-color: #ffffff;
+        color: #333333 !important;
+        border: 2px solid #e0e0e0;
+    }
+    /* 텍스트 색상 강제 지정 */
+    .dwn-white:visited, .dwn-white:active, .dwn-white:link {
+        color: #333333 !important;
     }
 
     [data-testid="stVerticalBlock"] { gap: 0rem !important; }
@@ -159,7 +190,6 @@ def increase_q(): st.session_state.target_q_count += 1
 def decrease_q():
     if st.session_state.target_q_count > 1: st.session_state.target_q_count -= 1
 
-# [NEW] 과목 변경 시 아래쪽 과목도 모두 따라가게 하는 함수
 def on_subject_change(idx):
     if f"subj_{idx}" in st.session_state:
         new_subj = st.session_state[f"subj_{idx}"]
@@ -167,7 +197,6 @@ def on_subject_change(idx):
             for k in range(idx + 1, st.session_state.target_q_count + 1):
                 st.session_state[f"subj_{k}"] = new_subj
 
-# 기존 년도 변경 함수
 def on_year_change(idx):
     if f"y_{idx}" in st.session_state:
         ny = st.session_state[f"y_{idx}"]
@@ -176,8 +205,6 @@ def on_year_change(idx):
 
 # [3] 데이터 로드 (logic.py)
 available_exams = logic.get_available_exams()
-
-# [NEW] 과목 리스트 정의
 subject_list = ["과목", "추리논증"]
 
 # [4] UI 구성
@@ -202,36 +229,17 @@ if available_exams:
         </div>
         """, unsafe_allow_html=True)
         
-        # 3단 컬럼 구성 (과목 - 년도 - 번호)
-        col_subj, col_y, col_n = st.columns([1, 0.8, 1], gap="small")
+        # 3단 컬럼 구성
+        col_subj, col_y, col_n = st.columns([1.2, 1, 1], gap="small")
         
-        # 1. 과목 선택
         with col_subj:
-            subj = st.selectbox(
-                "subject", subject_list,
-                key=f"subj_{i}",
-                label_visibility="collapsed",
-                on_change=on_subject_change, args=(i,)
-            )
-
-        # 2. 년도 선택
+            subj = st.selectbox("subject", subject_list, key=f"subj_{i}", label_visibility="collapsed", on_change=on_subject_change, args=(i,))
         with col_y:
-            y = st.selectbox(
-                "y", years_list, 
-                key=f"y_{i}", 
-                label_visibility="collapsed", 
-                on_change=on_year_change, args=(i,)
-            )
-            
-        # 3. 문항 번호 선택
+            y = st.selectbox("y", years_list, key=f"y_{i}", label_visibility="collapsed", on_change=on_year_change, args=(i,))
         with col_n:
             if subj != "과목" and y != "년도":
                 mv = 35 if y.split()[0] in ['2017','2018'] else 40
-                n_str = st.selectbox(
-                    "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
-                    key=f"n_{i}", 
-                    label_visibility="collapsed"
-                )
+                n_str = st.selectbox("n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], key=f"n_{i}", label_visibility="collapsed")
                 if n_str != "문항 번호":
                     user_selections[i] = (y, int(n_str.replace("번", "")))
             else:
@@ -250,7 +258,7 @@ if available_exams:
         else:
             st.button("－", disabled=True, use_container_width=True)
 
-# [5] 메인 실행 및 다운로드 로직 (Session State 적용)
+# [5] 메인 실행 및 다운로드 로직 (HTML 링크 방식 적용)
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
 
@@ -259,7 +267,6 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="prima
     if valid_count == 0:
         st.warning("문제를 선택해주세요.")
     else:
-        # logic.py 호출
         prog = st.progress(0)
         
         st.session_state['prob_pdf'] = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
@@ -269,16 +276,27 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="prima
         
         st.success("생성 완료! 아래 버튼을 눌러 다운로드하세요.")
 
-# 2. 파일이 생성되어 있다면 다운로드 버튼 표시
+# 2. 파일이 생성되어 있다면 HTML 다운로드 링크 표시
 if st.session_state.get('generated', False):
     prob_pdf = st.session_state['prob_pdf']
     ans_pdf = st.session_state['ans_pdf']
     safe_name = st.session_state['safe_name']
     
+    # PDF 데이터를 Base64 문자열로 변환
+    b64_prob = base64.b64encode(prob_pdf).decode()
+    b64_ans = base64.b64encode(ans_pdf).decode()
+    
     st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
     
-    c_d1, c_d2 = st.columns(2)
-    c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
-    c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_해설.pdf", "application/pdf", use_container_width=True)
+    c_d1, c_d2 = st.columns(2, gap="small")
+    
+    # [핵심] st.download_button 대신 HTML <a> 태그를 버튼처럼 보이게 렌더링
+    with c_d1:
+        href_prob = f'<a href="data:application/pdf;base64,{b64_prob}" download="{safe_name}_문제.pdf" class="dwn-btn dwn-white">📥 문제지 받기</a>'
+        st.markdown(href_prob, unsafe_allow_html=True)
+        
+    with c_d2:
+        href_ans = f'<a href="data:application/pdf;base64,{b64_ans}" download="{safe_name}_해설.pdf" class="dwn-btn dwn-white">📥 정답지 받기</a>'
+        st.markdown(href_ans, unsafe_allow_html=True)
     
     st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
