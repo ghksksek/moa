@@ -18,11 +18,20 @@ def get_available_exams():
     if not os.path.exists(base_path): return {}
     exams = {}
     subjects = {"c": "추리", "i": "언어"}
+    
     for sub_code, sub_name in subjects.items():
         sub_path = os.path.join(base_path, sub_code)
         if os.path.exists(sub_path):
             for year in [f for f in os.listdir(sub_path) if os.path.isdir(os.path.join(sub_path, f))]:
-                exams[f"{year} ({sub_name})"] = f"leet/{sub_code}/{year}"
+                # [수정] '추리' 과목인 경우 '(추리)' 꼬리표를 떼고 년도만 표시
+                if sub_name == "추리":
+                    key_name = year
+                else:
+                    # 다른 과목(언어 등)이 추가될 경우를 대비해 구분자 유지
+                    key_name = f"{year} ({sub_name})"
+                
+                exams[key_name] = f"leet/{sub_code}/{year}"
+                
     return dict(sorted(exams.items(), reverse=True))
 
 # [2] 폰트 경로 설정
@@ -101,7 +110,7 @@ def create_answer_pdf(selections, title):
 
     return doc.write()
 
-# [4] 문제지 PDF 생성 로직 (강제 배치 버전)
+# [4] 문제지 PDF 생성 로직 (Z패턴 강제 적용 + 페이지 넘김 방지)
 def create_problem_pdf(user_selections, title, show_source, one_q_per_row, available_exams, progress_bar=None):
     final_font_path, title_font_path = get_fonts()
     
@@ -146,12 +155,20 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
     p_idx = 0
     valid_count = len(user_selections)
     
-    # [핵심] 배치 순서 추적 ('r'로 시작해 첫 루프에서 'l'이 되도록)
+    # [핵심] 배치 순서 추적
     last_placed_col = 'r' 
 
     for i in sorted(user_selections.keys()):
         y_display, sn = user_selections[i]
-        folder_path = available_exams[y_display]
+        
+        # [수정] available_exams에서 키를 찾을 때, logic.py에서 (추리)를 뗐으므로
+        # user_selections에 있는 '2024' 같은 순수 년도 키로 바로 접근 가능합니다.
+        # 만약 user_selections에 아직 (추리)가 붙어있다면 strip 필요.
+        # 하지만 maker_mobile.py에서 로드한 keys() 자체가 이미 logic.py에서 온 것이므로 안전합니다.
+        
+        folder_path = available_exams.get(y_display, "")
+        if not folder_path: continue # 경로 없으면 스킵
+
         ip = f"output/{folder_path}/{sn:02d}.jpg"
         
         if os.path.exists(ip):
@@ -164,46 +181,34 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                 col = None
                 
                 if one_q_per_row:
-                    # 1쪽 1문항은 항상 왼쪽 배치 (높이 검사 유지)
                     if yl + th <= PH - FOOTER_H - 5:
                         col = 'l'
                     else:
                         col = None
                 else:
-                    # [요청 반영] Z패턴 강제 (높이 검사 삭제)
-                    # 이전이 오른쪽 -> 이번엔 무조건 왼쪽
-                    # 이전이 왼쪽 -> 이번엔 무조건 오른쪽
+                    # Z패턴 강제
                     target = 'l' if last_placed_col == 'r' else 'r'
-                    
-                    # [새 페이지 판단 기준]
-                    # 이미지를 넣을 '시작 위치'가 이미 페이지 범위를 벗어났을 때만 넘김
                     limit_y = PH - FOOTER_H - 10 
                     
                     if target == 'l':
-                        if yl > limit_y: # 시작점이 너무 아래면 다음 페이지
+                        if yl > limit_y: 
                             col = None
                         else:
                             col = 'l'
-                    else: # target == 'r'
-                        if yr > limit_y: # 시작점이 너무 아래면 다음 페이지
-                            # 오른쪽 차례인데 자리가 없으면 다음 페이지로 가야함
-                            # 다음 페이지 첫 타자는 '왼쪽'이어야 하므로 col=None 처리하면 됨
+                    else: 
+                        if yr > limit_y: 
                             col = None
                         else:
                             col = 'r'
 
-                # 새 페이지 생성
                 if col is None:
                     pg_cnt += 1
                     curr_page = doc.new_page(width=PW, height=PH)
                     draw_header(curr_page, pg_cnt, title)
                     curr_page.draw_line((PW/2, START_Y), (PW/2, PH-FOOTER_H), color=(0.8,0.8,0.8), width=0.5)
                     yl, yr = START_Y, START_Y
-                    
-                    # 새 페이지는 항상 왼쪽부터
                     col = 'l'
                 
-                # 그리기 및 좌표 갱신
                 if col == 'l':
                     cx = MARGIN
                     cy = yl
@@ -215,7 +220,6 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                     yr += th + 20
                     last_placed_col = 'r'
                 
-                # 이미지 삽입 (잘리더라도 무조건 그림)
                 iy = cy
                 if show_source:
                     t = f"{y_display} LEET {sn}번"
@@ -239,7 +243,6 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
             progress_bar.progress(p_idx / valid_count)
         gc.collect()
     
-    # 페이지 번호
     tot = len(doc); bw, bh = 60, 24
     for i, p in enumerate(doc):
         pg = i+1; cx = PW/2; by = PH - FOOTER_H/2 + bh/2

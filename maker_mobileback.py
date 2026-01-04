@@ -1,15 +1,16 @@
 import streamlit as st
 import streamlit.components.v1 as components
 import base64
-import os
-import logic
+import os  # <--- [중요] 이 줄이 빠져서 에러가 났습니다. 다시 추가했습니다!
+import logic  # logic.py를 불러옵니다
 
 # [0] 테마 및 설정
 config_dir = ".streamlit"
 if not os.path.exists(config_dir):
     os.makedirs(config_dir)
 
-with open(os.path.join(config_dir, "config.toml"), "w", encoding='utf-8') as f:
+config_path = os.path.join(config_dir, "config.toml")
+with open(config_path, "w", encoding='utf-8') as f:
     f.write("""[theme]
 primaryColor="#0614c1"
 backgroundColor="#ffffff"
@@ -33,7 +34,7 @@ st.markdown("""
         padding-right: 1rem !important;
     }
     
-    /* 2. 문항 헤더 (심플 텍스트 스타일) */
+    /* 2. 문항 헤더 (검정 알약 스타일) */
     .slot-header { 
         background-color: transparent !important; 
         color: #000000 !important;                
@@ -57,46 +58,26 @@ st.markdown("""
         line-height: 1;
     }
     
-    /* 3. [수정] 입력창 중앙 정렬 강화 */
+    /* 3. 입력창 디자인 */
     .stSelectbox label { display: none !important; }
-    
-    /* 입력창 외곽 박스 */
     div[data-baseweb="select"] > div {
         background-color: #f8f9fa !important;
         border-color: #e0e0e0 !important;
         border-radius: 8px !important;
         min-height: 45px !important; 
         height: 45px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important; /* 전체 중앙 정렬 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
-    
-    /* [핵심] 텍스트를 감싸는 내부 컨테이너까지 강제 중앙 정렬 */
-    div[data-baseweb="select"] > div > div:first-child {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 100% !important;
-        margin: 0 auto !important;
-        padding: 0 !important;
-    }
-
-    /* 실제 텍스트 스팬 */
     div[data-baseweb="select"] span {
         font-size: 14px !important;
         color: #333;
-        text-align: center !important;
-        width: 100% !important;
-        display: block !important;
-        margin: 0 auto !important;
+        text-align: center;
+        width: 100%;
+        display: block;
     }
     
-    /* 우측 화살표 아이콘 미세 조정 */
-    div[data-baseweb="select"] svg {
-        margin-left: 5px !important;
-    }
-
     /* 4. 오답노트 이름 입력창 */
     .stTextInput input {
         text-align: center;
@@ -124,16 +105,19 @@ st.markdown("""
         width: 100% !important;
         border: 2px solid #e0e0e0 !important;
     }
+    
     button[data-testid="baseButton-secondary"]:has(div:contains("＋")) {
         color: #0614c1 !important;
         background-color: #f0f7ff !important;
         border-color: #0614c1 !important;
     }
+
     button[data-testid="baseButton-secondary"]:has(div:contains("－")) {
         color: #ff4b4b !important;
         background-color: #fff5f5 !important;
         border-color: #ff4b4b !important;
     }
+
     button[kind="primary"] {
         background-color: #0614c1 !important; 
         border-color: #0614c1 !important;
@@ -159,26 +143,14 @@ def increase_q(): st.session_state.target_q_count += 1
 def decrease_q():
     if st.session_state.target_q_count > 1: st.session_state.target_q_count -= 1
 
-# [NEW] 과목 변경 시 아래쪽 과목도 모두 따라가게 하는 함수
-def on_subject_change(idx):
-    if f"subj_{idx}" in st.session_state:
-        new_subj = st.session_state[f"subj_{idx}"]
-        if new_subj != "과목":
-            for k in range(idx + 1, st.session_state.target_q_count + 1):
-                st.session_state[f"subj_{k}"] = new_subj
-
-# 기존 년도 변경 함수
 def on_year_change(idx):
     if f"y_{idx}" in st.session_state:
         ny = st.session_state[f"y_{idx}"]
         if ny != "년도":
             for k in range(idx + 1, st.session_state.target_q_count + 1): st.session_state[f"y_{k}"] = ny
 
-# [3] 데이터 로드 (logic.py)
+# [3] 데이터 로드 (logic.py에서 가져옴)
 available_exams = logic.get_available_exams()
-
-# [NEW] 과목 리스트 정의
-subject_list = ["과목", "추리논증"]
 
 # [4] UI 구성
 raw_title = st.text_input("custom_title_input", placeholder="오답노트 이름", label_visibility="collapsed")
@@ -202,19 +174,8 @@ if available_exams:
         </div>
         """, unsafe_allow_html=True)
         
-        # 3단 컬럼 구성 (과목 - 년도 - 번호)
-        col_subj, col_y, col_n = st.columns([1, 1, 1], gap="small")
+        col_y, col_n = st.columns([1, 1], gap="small")
         
-        # 1. 과목 선택
-        with col_subj:
-            subj = st.selectbox(
-                "subject", subject_list,
-                key=f"subj_{i}",
-                label_visibility="collapsed",
-                on_change=on_subject_change, args=(i,)
-            )
-
-        # 2. 년도 선택
         with col_y:
             y = st.selectbox(
                 "y", years_list, 
@@ -223,9 +184,8 @@ if available_exams:
                 on_change=on_year_change, args=(i,)
             )
             
-        # 3. 문항 번호 선택
         with col_n:
-            if subj != "과목" and y != "년도":
+            if y != "년도":
                 mv = 35 if y.split()[0] in ['2017','2018'] else 40
                 n_str = st.selectbox(
                     "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
@@ -239,18 +199,24 @@ if available_exams:
         
         st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
 
-    # 버튼 영역
+    # 하단 조작 버튼
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
     b_col1, b_col2 = st.columns(2, gap="small")
+    
     with b_col1:
-        if st.button("＋", key="add_btn", use_container_width=True): increase_q(); st.rerun()
+        if st.button("＋", key="add_btn", use_container_width=True):
+            increase_q()
+            st.rerun()
+            
     with b_col2:
         if st.session_state.target_q_count > 1:
-            if st.button("－", key="del_btn", type="secondary", use_container_width=True): decrease_q(); st.rerun()
+            if st.button("－", key="del_btn", type="secondary", use_container_width=True):
+                decrease_q()
+                st.rerun()
         else:
             st.button("－", disabled=True, use_container_width=True)
 
-# [5] 메인 실행 및 다운로드 로직 (Session State 적용)
+# [5] 메인 실행 (PDF 생성 - logic.py 사용)
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
 
@@ -262,6 +228,7 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="prima
         # logic.py 호출
         prog = st.progress(0)
         
+        # 생성 후 세션 상태에 저장
         st.session_state['prob_pdf'] = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
         st.session_state['ans_pdf'] = logic.create_answer_pdf(user_selections, custom_title)
         st.session_state['safe_name'] = custom_title.strip()
