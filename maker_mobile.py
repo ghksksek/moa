@@ -297,3 +297,22 @@ if st.session_state.get('generated', False):
     c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_정답.pdf", "application/pdf", use_container_width=True)
     
     st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
+
+    # [6] 자동 높이 조절 스크립트 (아이폰 갇힘 방지용 핵심 코드)
+components.html("""
+<script>
+    function resizeIframe() {
+        const body = document.body;
+        const html = document.documentElement;
+        const height = Math.max(
+            body.scrollHeight, body.offsetHeight,
+            html.clientHeight, html.scrollHeight, html.offsetHeight
+        );
+        // 부모 페이지(아임웹 등)로 높이 정보 전송
+        window.parent.postMessage({type: 'streamlit:resize', height: height}, '*');
+    }
+    // 0.5초마다 높이 체크하여 전송
+    setInterval(resizeIframe, 500);
+    window.onload = resizeIframe;
+</script>
+""", height=0)
