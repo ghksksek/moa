@@ -44,14 +44,11 @@ st.markdown("""
         padding-right: 1rem !important;
     }
     
-    /* 2. [수정] 문항 헤더 (텍스트 형태, 여백 및 두께 조정) */
+    /* 2. 문항 헤더 (텍스트 형태, 여백 및 두께 조정) */
     .slot-header { 
         background-color: transparent !important; 
         color: #000000 !important;                
-        
-        /* [요청반영] 글씨 두께를 800 -> 600으로 줄여서 덜 진하게 */
         font-weight: 600; 
-        
         font-size: 18px;                          
         border-radius: 0px !important;        
         height: auto !important; 
@@ -60,10 +57,7 @@ st.markdown("""
         width: 100%;
         display: flex;           
         align-items: center;     
-        
-        /* [요청반영] 헤더와 아래 입력창 사이 여백을 10px -> 25px로 확대 */
-        margin-bottom: 15px !important; 
-        
+        margin-bottom: 25px !important; 
         padding-left: 2px;       
     }
     
@@ -103,7 +97,7 @@ st.markdown("""
         min-height: 45px;
         background-color: #f8f9fa;
         border-radius: 8px;
-        font-weight: 600; /* 제목도 너무 진하지 않게 통일 */
+        font-weight: 600;
     }
 
     /* 5. 토글 스위치 */
@@ -199,10 +193,10 @@ available_exams = get_available_exams()
 final_font_path = "MALGUN.TTF" if os.path.exists("MALGUN.TTF") else "malgun.ttf" if os.path.exists("malgun.ttf") else None
 title_font_path = "SBM.TTF" if os.path.exists("SBM.TTF") else "SBM.ttf" if os.path.exists("SBM.ttf") else None
 
-# 1. 오답노트 이름 입력
-st.text_input("custom_title_input", placeholder="오답노트 이름", label_visibility="collapsed")
-custom_title = st.session_state.get("custom_title_input", "나만의 기출 모음집")
-if not custom_title: custom_title = "나만의 기출 모음집"
+# 1. 오답노트 이름 입력 (수정된 부분: 변수에 바로 할당)
+raw_title = st.text_input("custom_title_input", placeholder="오답노트 이름", label_visibility="collapsed")
+# 값이 있으면 그걸 쓰고, 없으면 기본값 사용
+custom_title = raw_title if raw_title else "나만의 기출 모음집"
 
 # 2. 토글 버튼
 c_t1, c_t2 = st.columns([1, 1])
@@ -221,14 +215,14 @@ if available_exams:
     
     for i in range(1, st.session_state.target_q_count + 1):
         
-        # 1. 헤더 (심플 텍스트: ● 1 문)
+        # 1. 헤더 (심플 텍스트)
         st.markdown(f"""
         <div class='slot-header'>
             <span class='q-bullet'>●</span> {i} 문
         </div>
         """, unsafe_allow_html=True)
         
-        # 2. 년도 & 번호 선택 (2단 컬럼)
+        # 2. 년도 & 번호 선택
         col_y, col_n = st.columns([1, 1], gap="small")
         
         with col_y:
@@ -252,7 +246,7 @@ if available_exams:
             else:
                 st.selectbox("n", ["문항 번호"], key=f"n_{i}", disabled=True, label_visibility="collapsed")
         
-        # 다음 문항과의 간격
+        # 간격
         st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
 
     # =========================================================
@@ -262,13 +256,11 @@ if available_exams:
     
     b_col1, b_col2 = st.columns(2, gap="small")
     
-    # 왼쪽: 추가 (+)
     with b_col1:
         if st.button("＋", key="add_btn", use_container_width=True):
             increase_q()
             st.rerun()
             
-    # 오른쪽: 삭제 (-)
     with b_col2:
         if st.session_state.target_q_count > 1:
             if st.button("－", key="del_btn", type="secondary", use_container_width=True):
@@ -277,7 +269,7 @@ if available_exams:
         else:
             st.button("－", disabled=True, use_container_width=True)
 
-# [4] PDF 생성 로직 (기존 유지)
+# [4] PDF 생성 로직 (수정 완료: custom_title 변수 사용)
 def create_answer_pdf(selections, title):
     doc = fitz.open()
     SHOW_EXPLANATION = False 
@@ -313,6 +305,8 @@ def create_answer_pdf(selections, title):
             elif final_font_path: page.insert_font(fontname=title_font_name, fontfile=final_font_path)
 
             page.insert_textbox(fitz.Rect(0, 55, PW, 75), "신성우의 로직트리 제공", fontsize=10, fontname=font_name, color=(0.5,0.5,0.5), align=1)
+            
+            # [확인] 여기에 custom_title 변수가 정상적으로 전달됩니다.
             page.insert_textbox(fitz.Rect(0, 80, PW, 120), f"{title} - 정답표", fontsize=20, fontname=title_font_name, color=(0,0,0), align=1)
 
             header_y = TABLE_START_Y; header_fs = 11
@@ -386,6 +380,7 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="prima
             page.draw_line((MARGIN, line_y), (PW - MARGIN, line_y), color=(0.8,0.8,0.8), width=1.5)
 
         pg_cnt = 1; curr_page = doc.new_page(width=PW, height=PH)
+        # [확인] 여기서도 custom_title이 정상적으로 전달됩니다.
         draw_header(curr_page, pg_cnt, custom_title)
         curr_page.draw_line((PW/2, START_Y), (PW/2, PH-FOOTER_H), color=(0.8,0.8,0.8), width=0.5)
         yl, yr = START_Y, START_Y; p_idx = 0
