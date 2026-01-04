@@ -342,7 +342,7 @@ def create_answer_pdf(selections, title):
 # [5] 메인 실행 버튼 (가장 하단)
 st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
-if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="primary", use_container_width=True):
+if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+정답)", type="primary", use_container_width=True):
     if valid_count == 0: st.warning("문제를 선택해주세요.")
     else:
         # A. 문제지 PDF 생성
@@ -447,10 +447,10 @@ if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="prima
                 document.body.appendChild(link); link.click(); document.body.removeChild(link);
             }}
             setTimeout(function() {{ save('{safe_name}_문제.pdf', '{b64_prob}'); }}, 500);
-            setTimeout(function() {{ save('{safe_name}_해설.pdf', '{b64_ans}'); }}, 1500);
+            setTimeout(function() {{ save('{safe_name}_정답.pdf', '{b64_ans}'); }}, 1500);
         </script>"""
         components.html(js, height=0)
         c_d1, c_d2 = st.columns(2)
         c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
-        c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_해설.pdf", "application/pdf", use_container_width=True)
+        c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_정답.pdf", "application/pdf", use_container_width=True)
         st.success("생성 완료!")
