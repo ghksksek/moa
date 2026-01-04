@@ -129,13 +129,27 @@ def create_answer_pdf(selections, title):
 
     return doc.write()
 
-# [4] 문제지 PDF 생성 로직 (PNG + _2.png 연달아 배치 + Z패턴 고정)
+# ... (앞부분 import 및 get_available_exams, create_answer_pdf 등은 그대로 유지) ...
+
+# [4] 문제지 PDF 생성 로직 (이어지는 문제 높이 개별 설정)
 def create_problem_pdf(user_selections, title, show_source, one_q_per_row, available_exams, progress_bar=None):
     final_font_path, title_font_path = get_fonts()
     
     doc = fitz.open()
     PT = 2.83465; PW = 297.0 * PT; PH = 420.0 * PT; MARGIN = 20 * PT; HEADER_H = 18 * PT; FOOTER_H = 25 * PT
-    COL_GAP = 12 * PT; COL_W = (PW - 2*MARGIN - COL_GAP)/2; START_Y = MARGIN + HEADER_H + 8
+    COL_GAP = 12 * PT; COL_W = (PW - 2*MARGIN - COL_GAP)/2
+    
+    # ====================================================================
+    # [설정] 시작 높이 조절 (여기서 숫자를 바꾸세요)
+    # ====================================================================
+    # 1. 일반 문제 시작 높이 (기존과 동일)
+    START_Y_NORMAL = MARGIN + HEADER_H + 7
+    
+    # 2. 이어지는 문제(_2) 시작 높이 (텍스트가 없으니 조금 더 위로 올려도 됨)
+    # 예: 일반 문제보다 20포인트 더 위로 올리고 싶으면 값을 줄이세요.
+    START_Y_CONT = MARGIN + HEADER_H + 55
+    # ====================================================================
+    
     font_alias = "my_font"; title_alias = "my_title"
     
     def draw_header(page, pg_num, title_text):
@@ -168,33 +182,24 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
 
     pg_cnt = 0
     curr_page = None
-    
-    # [중요] 슬롯(칸) 인덱스: 0(왼쪽), 1(오른쪽), 2(다음페이지 왼쪽)...
     slot_idx = 0 
-    
-    # 진행률 표시용
     q_progress_idx = 0
     valid_count = len(user_selections)
 
     for i in sorted(user_selections.keys()):
         y_display, sn = user_selections[i]
         
-        # 폴더 경로 찾기
         folder_path = available_exams.get(y_display)
         if not folder_path:
             folder_path = available_exams.get(f"{y_display} (추리)", "")
-            
         if not folder_path: continue
 
-        # [이미지 수집] 기본 문제 + (있다면) 두 번째 페이지(_2)
         images_to_process = []
         
-        # 기본: 09.png
         img_1 = f"output/{folder_path}/{sn:02d}.png"
         if os.path.exists(img_1):
             images_to_process.append(img_1)
             
-            # 이어지는 문제 확인: 09_2.png 또는 09_02.png
             img_2_a = f"output/{folder_path}/{sn:02d}_2.png"
             img_2_b = f"output/{folder_path}/{sn:02d}_02.png"
             
@@ -203,24 +208,22 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
             elif os.path.exists(img_2_b):
                 images_to_process.append(img_2_b)
         
-        # [배치 로직] 수집된 이미지들을 순서대로 슬롯에 배치
         for img_path in images_to_process:
+            is_continuation = "_2.png" in img_path or "_02.png" in img_path
+            
             with Image.open(img_path) as pim:
                 sw, sh = pim.size
                 ih = sh * (COL_W / sw)
-                hh = 20 if show_source else 0
+                hh = 20 if (show_source and not is_continuation) else 0
                 th = hh + ih
                 
                 is_left_col = False
                 
                 if one_q_per_row:
-                    # 1쪽 1문항 옵션: 매번 새 페이지
                     is_new_page = True
                     is_left_col = True
-                    # 슬롯 인덱스도 강제로 짝수(왼쪽)로 맞춤 (페이지 넘김 효과)
                     if slot_idx % 2 != 0: slot_idx += 1 
                 else:
-                    # Z패턴: 슬롯 인덱스가 짝수면 왼쪽(새페이지), 홀수면 오른쪽
                     if slot_idx % 2 == 0:
                         is_new_page = True
                         is_left_col = True
@@ -228,43 +231,49 @@ def create_problem_pdf(user_selections, title, show_source, one_q_per_row, avail
                         is_new_page = False
                         is_left_col = False
                 
-                # 새 페이지 생성
                 if is_new_page:
                     pg_cnt += 1
                     curr_page = doc.new_page(width=PW, height=PH)
                     draw_header(curr_page, pg_cnt, title)
-                    curr_page.draw_line((PW/2, START_Y), (PW/2, PH-FOOTER_H), color=(0.8,0.8,0.8), width=0.5)
+                    # 구분선은 일반 시작 높이 기준으로 그림 (일관성 유지)
+                    curr_page.draw_line((PW/2, START_Y_NORMAL), (PW/2, PH-FOOTER_H), color=(0.8,0.8,0.8), width=0.5)
                 
-                cy = START_Y
+                # [핵심] 문제 종류에 따라 시작 높이(cy) 결정
+                if is_continuation:
+                    cy = START_Y_CONT
+                else:
+                    cy = START_Y_NORMAL
+                
                 cx = MARGIN if is_left_col else MARGIN + COL_W + COL_GAP
                 
                 iy = cy
-                if show_source:
-                    # _2 파일인 경우 출처 표시에 (2) 등을 붙일 수도 있으나, 여기선 깔끔하게 원본 출처 유지
+                
+                if show_source and not is_continuation:
                     t = f"{y_display} LEET {sn}번"
                     if final_font_path: curr_page.insert_text((cx, cy+12), t, fontname=font_alias, fontfile=final_font_path, fontsize=9, color=(0.4,0.4,0.4))
                     else: curr_page.insert_text((cx, cy+12), t, fontsize=9, color=(0.4,0.4,0.4))
-                    iy += hh
+                    
+                iy += hh 
                 
                 r = fitz.Rect(cx, iy, cx+COL_W, iy+ih)
                 
-                # [PNG 포맷 삽입]
                 b = io.BytesIO()
                 pim.save(b, format='PNG') 
                 curr_page.insert_image(r, stream=b.getvalue())
                 b.close()
                 
-                curr_page.draw_rect(fitz.Rect(cx, iy, cx+17, iy+20), color=(1,1,1), fill=(1,1,1))
-                
-                # 문항 번호 (두 번째 페이지는 번호 생략할지 선택 가능하나, 현재는 일관성 있게 표시)
-                # 만약 _2 페이지에는 번호를 안 붙이고 싶다면 파일명 체크해서 skip 가능
-                ns = f"{i}."
-                if final_font_path:
-                    curr_page.insert_text((cx, iy+14), ns, fontname=font_alias, fontfile=final_font_path, fontsize=13, color=(0,0,0))
-                    curr_page.insert_text((cx+0.7, iy+14), ns, fontname=font_alias, fontfile=final_font_path, fontsize=13, color=(0,0,0))
-                else: curr_page.insert_text((cx, iy+14), ns, fontsize=13, color=(0,0,0))
+                if not is_continuation:
+                    # 지우개
+                    curr_page.draw_rect(fitz.Rect(cx, iy, cx+17, iy+20), color=(1,1,1), fill=(1,1,1))
+                    
+                    # 번호
+                    ns = f"{i}."
+                    if final_font_path:
+                        curr_page.insert_text((cx, iy+14), ns, fontname=font_alias, fontfile=final_font_path, fontsize=13, color=(0,0,0))
+                        curr_page.insert_text((cx+0.7, iy+14), ns, fontname=font_alias, fontfile=final_font_path, fontsize=13, color=(0,0,0))
+                    else:
+                        curr_page.insert_text((cx, iy+14), ns, fontsize=13, color=(0,0,0))
             
-            # 다음 슬롯으로 이동
             slot_idx += 1
         
         q_progress_idx += 1
