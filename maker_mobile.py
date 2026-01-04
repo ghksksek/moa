@@ -147,6 +147,11 @@ st.markdown("""
         background-color: #040e94 !important;
         border-color: #040e94 !important;
     }
+            
+    /* 7. [NEW] Press Enter to apply 문구 제거 */
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
 
     [data-testid="stVerticalBlock"] { gap: 0rem !important; }
     .element-container { margin-bottom: 5px !important; }
@@ -265,7 +270,7 @@ st.markdown("<div style='margin-top: 10px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
 
 # 1. 생성 버튼 클릭 시 로직
-if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+해설)", type="primary", use_container_width=True):
+if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+정답)", type="primary", use_container_width=True):
     if valid_count == 0:
         st.warning("문제를 선택해주세요.")
     else:
@@ -289,6 +294,6 @@ if st.session_state.get('generated', False):
     
     c_d1, c_d2 = st.columns(2)
     c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
-    c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_해설.pdf", "application/pdf", use_container_width=True)
+    c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_정답.pdf", "application/pdf", use_container_width=True)
     
     st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
