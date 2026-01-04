@@ -180,6 +180,11 @@ st.markdown("""
         border-color: #040e94 !important;
     }
 
+    /* 7. [NEW] Press Enter to apply 문구 제거 */
+    div[data-testid="InputInstructions"] {
+        display: none !important;
+    }
+
     /* 레이아웃 여백 제거 */
     div[data-testid="column"] { 
         padding: 0 !important; 
