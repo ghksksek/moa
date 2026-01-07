@@ -2,7 +2,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 import base64
 import os
-import logic  # [핵심] 공통 로직 모듈 불러오기
+import logic
 
 # [0] 테마 및 설정
 config_dir = ".streamlit"
@@ -20,26 +20,21 @@ font="sans serif"
 
 st.set_page_config(layout="wide", page_title="기출 연습서 생성기", initial_sidebar_state="collapsed")
 
-# [1] CSS 스타일 (PC 전용)
+# [1] CSS 스타일
 st.markdown("""
 <style>
-    /* 1. 기본 UI 초기화 */
     header, footer { display: none !important; }
-    
     .block-container {
-        max-width: 1000px !important; /* [수정] 너비를 1000px로 확장 */
+        max-width: 1000px !important;
         width: 100% !important;
         padding: 2rem 10px 5rem 10px !important;
         margin: 0 auto !important;
     }
-
-    /* 2. 입력창 강제 축소 및 정렬 */
     div[data-baseweb="select"], div[data-testid="stSelectbox"] {
         width: 100% !important;
         min-width: 0 !important;
         flex: 1 1 0% !important; 
     }
-
     .stSelectbox div[data-baseweb="select"] > div {
         background-color: #f7f9fc !important;
         border-color: #e0e6ed !important;
@@ -53,7 +48,6 @@ st.markdown("""
         min-width: 0px !important; 
         padding: 0 2px !important;
     }
-
     .stSelectbox div[data-baseweb="select"] > div > div:first-child {
         display: flex !important;
         align-items: center !important;
@@ -66,7 +60,6 @@ st.markdown("""
         margin: 0 auto !important;
         padding: 0 !important;
     }
-
     .stSelectbox div[data-baseweb="select"] span {
         font-size: 13px !important;
         color: #333 !important;
@@ -78,24 +71,19 @@ st.markdown("""
         overflow: hidden !important;
         text-overflow: ellipsis !important;
     }
-    
     div[data-baseweb="select"] svg {
         width: 12px !important;
         min-width: 12px !important;
         flex-shrink: 0 !important;
         margin-left: 2px !important;
     }
-
     .stTextInput input {
         text-align: left !important;
         min-width: 0px !important;
         width: 100% !important;
         padding-left: 10px !important;
     }
-    
     .stSelectbox label, .stTextInput label { display: none !important; }
-    
-    /* 3. 좌측 라벨 디자인 */
     .q-label-container {
         display: flex;
         align-items: flex-start; 
@@ -111,13 +99,12 @@ st.markdown("""
         margin-right: 5px;
         white-space: nowrap; 
     }
-
     .q-label-container-last {
         display: flex;
         align-items: flex-start; 
         justify-content: flex-start;
         min-height: 42px !important; 
-        height: 42px !important;     
+        height: 42px !important;      
         padding-top: 12px; 
         font-size: 16px !important; 
         font-weight: 800;
@@ -127,15 +114,12 @@ st.markdown("""
         margin-right: 5px;
         white-space: nowrap; 
     }
-    
     .q-bullet {
         color: #000000 !important;
         margin-right: 4px;
         font-size: 10px;
         margin-top: 4px; 
     }
-
-    /* 4. 버튼 스타일 */
     button[kind="secondary"], .add-btn button, button[kind="primary"] {
         font-weight: 900;
         height: 50px !important; 
@@ -146,7 +130,6 @@ st.markdown("""
         box-sizing: border-box !important;
         padding: 0 !important;
     }
-
     button[kind="secondary"] {
         border: 1px solid #e0e0e0 !important;
         background-color: #ffffff !important;
@@ -157,7 +140,6 @@ st.markdown("""
         background-color: #f5f5f5 !important;
         color: #333 !important;
     }
-    
     .add-btn button {
         border: 1px dashed #bbbbbb !important;
         background-color: #fafafa !important;
@@ -168,7 +150,6 @@ st.markdown("""
         background-color: #f0f0f0 !important;
         color: #333 !important;
     }
-
     button[kind="primary"] {
         background-color: #0614c1 !important;
         border-color: #0614c1 !important;
@@ -179,13 +160,7 @@ st.markdown("""
         background-color: #040e94 !important;
         border-color: #040e94 !important;
     }
-
-    /* 7. [NEW] Press Enter to apply 문구 제거 */
-    div[data-testid="InputInstructions"] {
-        display: none !important;
-    }
-
-    /* 레이아웃 여백 제거 */
+    div[data-testid="InputInstructions"] { display: none !important; }
     div[data-testid="column"] { 
         padding: 0 !important; 
         min-width: 0 !important; 
@@ -193,7 +168,6 @@ st.markdown("""
     }
     [data-testid="stVerticalBlock"] { gap: 0 !important; }
     [data-testid="stHorizontalBlock"] { gap: 0.5rem !important; }
-    
     @media (max-width: 600px) {
         .q-label-container, .q-label-container-last { padding-right: 5px; margin-right: 3px; }
         .stSelectbox div[data-baseweb="select"] span { font-size: 12px !important; }
@@ -203,13 +177,11 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# [2] 세션 및 데이터
 if 'target_q_count' not in st.session_state: st.session_state.target_q_count = 5 
 def increase_q(): st.session_state.target_q_count += 1
 def decrease_q():
     if st.session_state.target_q_count > 1: st.session_state.target_q_count -= 1
 
-# [NEW] 과목 연동 함수
 def on_subject_change(idx):
     if f"subj_{idx}" in st.session_state:
         new_subj = st.session_state[f"subj_{idx}"]
@@ -217,18 +189,15 @@ def on_subject_change(idx):
             for k in range(idx + 1, st.session_state.target_q_count + 1):
                 st.session_state[f"subj_{k}"] = new_subj
 
-# 기존 년도 연동 함수
 def on_year_change(idx):
     if f"y_{idx}" in st.session_state:
         ny = st.session_state[f"y_{idx}"]
         if ny != "년도":
             for k in range(idx + 1, st.session_state.target_q_count + 1): st.session_state[f"y_{k}"] = ny
 
-# 데이터 로드
 available_exams = logic.get_available_exams()
-subject_list = ["과목", "추리논증"]
+subject_list = ["과목", "추리논증", "언어이해"]
 
-# [3] UI 구성
 c1, c2 = st.columns([1, 1])
 with c1:
     raw_title = st.text_input("custom_title_input", placeholder="오답노트 이름", label_visibility="collapsed")
@@ -236,17 +205,12 @@ with c1:
 
 c3, c4, c_blank = st.columns([2, 2, 4])
 with c3: show_source = st.toggle("출처 표시", value=True)
-with c4: one_q_per_row = st.toggle("1쪽 1문항", value=False)
+with c4: one_q_per_row = st.toggle("오른쪽 비우기", value=False)
 
 st.divider()
 
-# =========================================================
-# 문항 생성 루프 (PC 레이아웃)
-# =========================================================
 user_selections = {}
 if available_exams:
-    years_list = ["년도"] + list(available_exams.keys())
-    
     for i in range(1, st.session_state.target_q_count + 1):
         
         row_cols = st.columns([1, 9], gap="small")
@@ -261,61 +225,46 @@ if available_exams:
             """, unsafe_allow_html=True)
         
         with row_cols[1]:
-            # [수정] 3단 컬럼: 과목(1.2) - 년도(1) - 문항(1)
             input_cols = st.columns([1, 1, 1], gap="small")
             
-            # 1. 과목
             with input_cols[0]:
-                subj = st.selectbox(
-                    "subject", subject_list,
-                    key=f"subj_{i}",
-                    label_visibility="collapsed",
-                    on_change=on_subject_change, args=(i,)
-                )
+                subj = st.selectbox("subject", subject_list, key=f"subj_{i}", label_visibility="collapsed", on_change=on_subject_change, args=(i,))
 
-            # 2. 년도
             with input_cols[1]:
-                y = st.selectbox(
-                    "y", years_list, 
-                    key=f"y_{i}", 
-                    label_visibility="collapsed", 
-                    on_change=on_year_change, args=(i,)
-                )
+                current_years = ["년도"]
+                if subj in available_exams:
+                    current_years += list(available_exams[subj].keys())
+                    
+                y = st.selectbox("y", current_years, key=f"y_{i}", label_visibility="collapsed", on_change=on_year_change, args=(i,))
             
-            # 3. 문항 번호
             with input_cols[2]:
                 if subj != "과목" and y != "년도":
-                    # [로직 수정] 기본 40문제 (예비, 2009, 2019~2026 포함)
-                    mv = 40
-                    
-                    # 년도 텍스트에서 숫자 부분만 추출
-                    y_str = y.split()[0] 
-                    
-                    # 숫자로 변환 가능한 경우(년도)만 체크, "예비"는 여기서 걸러져서 40문제 유지
-                    if y_str.isdigit():
-                        y_int = int(y_str)
-                        # 2010년부터 2018년까지만 35문제
-                        if 2010 <= y_int <= 2018:
-                            mv = 35
-                    
-                    n_str = st.selectbox(
-                        "n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], 
-                        key=f"n_{i}", 
-                        label_visibility="collapsed"
-                    )
-                    if n_str != "문항 번호":
-                        user_selections[i] = (y, int(n_str.replace("번", "")))
+                    if subj == "언어이해":
+                        ranges = [f"{k*3+1}~{k*3+3}" for k in range(10)]
+                        n_str = st.selectbox("n", ["문항 선택"] + ranges, key=f"n_{i}", label_visibility="collapsed")
+                        if n_str != "문항 선택":
+                            first_num = int(n_str.split("~")[0])
+                            set_id = (first_num - 1) // 3 + 1
+                            user_selections[i] = (y, set_id, "lang")
+                    else:
+                        mv = 40
+                        y_str = y.split()[0] 
+                        if y_str.isdigit():
+                            y_int = int(y_str)
+                            if 2010 <= y_int <= 2018: mv = 35
+                        
+                        n_str = st.selectbox("n", ["문항 번호"] + [f"{k}번" for k in range(1, mv+1)], key=f"n_{i}", label_visibility="collapsed")
+                        if n_str != "문항 번호":
+                            user_selections[i] = (y, int(n_str.replace("번", "")), "logic")
                 else:
                     st.selectbox("n", ["문항 번호"], key=f"n_{i}", disabled=True, label_visibility="collapsed")
         
         st.markdown("<div style='height: 12px;'></div>", unsafe_allow_html=True)
     
-    # 버튼 영역
     st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
     btn_row_cols = st.columns([1, 9], gap="small")
     
-    with btn_row_cols[0]:
-        st.empty() 
+    with btn_row_cols[0]: st.empty() 
     with btn_row_cols[1]:
         btn_input_cols = st.columns([1, 1], gap="small")
         with btn_input_cols[0]:
@@ -330,37 +279,28 @@ if available_exams:
             else:
                 st.button("－", disabled=True, use_container_width=True)
 
-# [5] 메인 실행 및 다운로드 로직 (Session State 적용)
 st.markdown("<div style='margin-top: 40px;'></div>", unsafe_allow_html=True)
 valid_count = len(user_selections)
 
-# 1. 생성 버튼 클릭 시 로직
-if st.button(f"🚀 {valid_count}문제 PDF 생성 (문제+정답)", type="primary", use_container_width=True):
+if st.button(f"🚀 {valid_count}문제 PDF 생성", type="primary", use_container_width=True):
     if valid_count == 0:
         st.warning("문제를 선택해주세요.")
     else:
         prog = st.progress(0)
-        
         st.session_state['prob_pdf'] = logic.create_problem_pdf(user_selections, custom_title, show_source, one_q_per_row, available_exams, prog)
         st.session_state['ans_pdf'] = logic.create_answer_pdf(user_selections, custom_title)
         st.session_state['safe_name'] = custom_title.strip()
         st.session_state['generated'] = True 
-        
-        st.success("생성 완료! 아래 버튼을 눌러 다운로드하세요.")
+        # [수정] 여기서 st.success 제거 (중복 방지)
 
-# 2. 파일이 생성되어 있다면 다운로드 버튼 표시
 if st.session_state.get('generated', False):
     prob_pdf = st.session_state['prob_pdf']
     ans_pdf = st.session_state['ans_pdf']
     safe_name = st.session_state['safe_name']
     
-    # 여백
     st.markdown("<div style='height: 25px;'></div>", unsafe_allow_html=True)
-    
     c_d1, c_d2 = st.columns(2)
     c_d1.download_button("📥 문제지 받기", prob_pdf, f"{safe_name}_문제.pdf", "application/pdf", use_container_width=True)
     c_d2.download_button("📥 정답지 받기", ans_pdf, f"{safe_name}_정답.pdf", "application/pdf", use_container_width=True)
-    
-    # 여백
     st.markdown("<div style='height: 35px;'></div>", unsafe_allow_html=True)
     st.success("생성 완료!")
