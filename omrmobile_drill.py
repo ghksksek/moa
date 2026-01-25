@@ -276,7 +276,7 @@ elif st.session_state['page_view'] == 'stats':
 # ------------------------------------------------------------------------------
 else:
     if not st.session_state['exam_started']:
-        st.markdown("<h1 class='start-title'>26년 신성우 모의고사</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 class='start-title'>26년 신성우 모의고사<br>모바일 OMR</h1>", unsafe_allow_html=True)
         
         with st.container(border=True):
             round_options = [f"{i}회" for i in range(1, 9)]
@@ -306,17 +306,18 @@ else:
 
             st.divider()
             
-            user_number = st.text_input("수험번호", placeholder="숫자만 입력하세요", key="input_num")
-            user_name = st.text_input("성명", placeholder="문자만 입력하세요", key="input_name")
-            
-            st.markdown("<div class='info-text'>수정사항, 검토의견, 통계 업로드 중입니다.<br>(1.27. 완료예정)<br><br> 입력한 수험번호와 성명을 기억해야 <br> 맞춤형 통계와 질의 응답을 확인할 수 있습니다.</div>", unsafe_allow_html=True)
+            # ------------------------------------------------------------------
+            # [수정된 부분] 라벨 숨김(label_visibility="collapsed") + Placeholder 변경
+            # ------------------------------------------------------------------
+            user_number = st.text_input("수험번호", placeholder="수험번호를 입력하세요", key="input_num", label_visibility="collapsed")
+            user_name = st.text_input("성명", placeholder="성명을 입력하세요", key="input_name", label_visibility="collapsed")
             
             start_btn_clicked = st.button("시험 시작", type="primary", use_container_width=True)
             warning_msg_box = st.empty() 
 
             if start_btn_clicked:
                 if not user_name or not user_number:
-                    warning_msg_box.warning("수험번호와 성명을 모두 입력하세요.")
+                    warning_msg_box.warning("수험번호와 성명을 먼저 입력해주세요.")
                 elif not user_number.isdigit():
                     warning_msg_box.error("🚨 수험번호는 숫자만 입력 가능합니다.")
                 else:
@@ -331,6 +332,7 @@ else:
                         'submitted': False
                     })
                     st.rerun()
+            st.markdown("<div class='info-text'>수정사항, 검토의견, 통계 업로드 중입니다.<br>(1.27. 완료예정)<br><br> 입력한 수험번호와 성명을 기억해야 <br> 맞춤형 통계와 질의 응답을 확인할 수 있습니다.</div>", unsafe_allow_html=True)
 
             c1, space, c2 = st.columns([1, 0.05, 1]) 
             with c1:
@@ -341,7 +343,7 @@ else:
             with c2:
                 if st.button("질의 응답", use_container_width=True):
                     if not user_number or not user_name:
-                        warning_msg_box.warning("⚠️ 질의응답을 이용하려면 수험번호와 성명을 먼저 입력해주세요.")
+                        warning_msg_box.warning("수험번호와 성명을 먼저 입력해주세요.")
                     else:
                         st.session_state['temp_user_info'] = {'num': user_number, 'name': user_name}
                         st.session_state['page_view'] = 'qna_list'
