@@ -128,6 +128,14 @@ st.markdown("""
 
     .stButton > button { margin-top: 15px; border: 2px solid #333; font-weight: bold; width: 100%; }
     .start-title { text-align: center; color: #333; margin-bottom: 20px;}
+    /* 상단 헤더(Rerun, Stop 메뉴 포함)와 하단 푸터 제거 */
+    #MainMenu {visibility: hidden;}
+    header {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* 상단 여백 조절 (헤더가 사라지면서 생기는 빈 공간 제거) */
+    .stAppDeployButton {display:none;}
+    div[data-testid="stToolbar"] {display:none;}
 
 </style>
 """, unsafe_allow_html=True)
