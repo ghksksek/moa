@@ -348,7 +348,7 @@ else:
             # ------------------------------------------------------------------
             # [수정된 부분] 라벨 숨김(label_visibility="collapsed") + Placeholder 변경
             # ------------------------------------------------------------------
-            user_number = st.text_input("수험번호", placeholder="수험번호를 입력하세요", key="input_num", label_visibility="collapsed")
+            user_number = st.text_input("수험번호", placeholder="임의의 수험번호를 입력하세요", key="input_num", label_visibility="collapsed")
             user_name = st.text_input("성명", placeholder="성명을 입력하세요", key="input_name", label_visibility="collapsed")
             
             start_btn_clicked = st.button("시험 시작", type="primary", use_container_width=True)
