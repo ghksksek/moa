@@ -151,7 +151,7 @@ if 'show_comments' not in st.session_state: st.session_state['show_comments'] = 
 # [화면 1] 설정
 # ==============================================================================
 if not st.session_state['exam_started']:
-    st.markdown("<h1 class='start-title'>26년 신성우 모의고사 채점기</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 class='start-title'>26년 신성우 모의고사</h1>", unsafe_allow_html=True)
     
     with st.container(border=True):
         # 1. 회차 선택
@@ -187,9 +187,8 @@ if not st.session_state['exam_started']:
         
         st.markdown("""
             <div class='info-text'>
-            수험번호와 성명은 타인에게 공개되지 않습니다.<br>
-            수험번호와 성명을 입력하고 답안을 제출하면 <br>
-            통계표를 볼 수 있습니다.
+            수험번호와 성명은 공개되지 않습니다.<br>
+            답안을 제출하면 통계를 볼 수 있습니다.
             </div>
         """, unsafe_allow_html=True)
         
