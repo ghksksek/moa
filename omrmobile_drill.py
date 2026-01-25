@@ -4,6 +4,7 @@ import pandas as pd
 import json
 import os
 import re
+import streamlit.components.v1 as components  # 이 줄을 import 쪽에 추가
 
 # [데이터 파일 경로]
 DATA_FILE = 'exam_data.json'
@@ -50,6 +51,44 @@ COMMENTS_DB = exam_data['comments']
 
 # --- 페이지 설정 ---
 st.set_page_config(page_title="모바일 OMR", layout="centered")
+# ==============================================================================
+# [추가됨] 아이프레임 자동 높이 조절 스크립트
+# ==============================================================================
+def auto_resize_iframe():
+    """
+    Streamlit 앱의 높이를 계산하여 부모 창(아임웹)으로 메시지를 보냅니다.
+    """
+    js = """
+    <script>
+        function sendHeight() {
+            // Streamlit 앱의 전체 높이를 계산 (약간의 여유값 +30)
+            const height = window.parent.document.body.scrollHeight;
+            
+            // 아임웹(부모의 부모 창)으로 메시지 전송
+            // 구조: Component Iframe -> Streamlit App -> Imweb
+            window.parent.parent.postMessage({
+                type: 'streamlit:height', 
+                height: height 
+            }, "*");
+        }
+
+        // 1. 처음 로드될 때 전송
+        window.addEventListener('load', function() {
+            setTimeout(sendHeight, 100); // 렌더링 시간 고려
+        });
+
+        // 2. 화면 크기가 변할 때마다 전송 (ResizeObserver)
+        const observer = new ResizeObserver(entries => {
+            sendHeight();
+        });
+        observer.observe(window.parent.document.body);
+    </script>
+    """
+    # 높이 0짜리 숨겨진 iframe을 만들어 스크립트 실행
+    components.html(js, height=0, width=0)
+
+# 함수 실행 (이 코드가 있어야 작동합니다)
+auto_resize_iframe()
 
 # --- CSS 스타일 ---
 st.markdown("""
