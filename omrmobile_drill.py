@@ -284,7 +284,7 @@ else:
     st.markdown("""
     <style>
         .block-container {
-            max-width: 300px !important;
+            max-width: 250px !important;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -301,7 +301,7 @@ else:
     if total_q > 0:
         with st.form("omr_form", border=False):
             with st.container(border=True):
-                h1, h2 = st.columns([2.5, 7.5]) 
+                h1, h2 = st.columns([2, 8]) 
                 with h1: st.markdown("<div class='header-box'>문번</div>", unsafe_allow_html=True)
                 with h2: st.markdown("<div class='header-box'>답 란&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</div>", unsafe_allow_html=True)
                 st.markdown("<div style='border-top: 2px solid #333; width:100%; line-height:0;'>&nbsp;</div>", unsafe_allow_html=True)
@@ -311,7 +311,7 @@ else:
                     if q > 1 and (q - 1) % 5 == 0:
                         st.markdown("<div class='separator-line'></div>", unsafe_allow_html=True)
 
-                    r1, r2 = st.columns([2.5, 7.5])
+                    r1, r2 = st.columns([2, 8])
                     with r1: st.markdown(f"<div class='q-num-box'>{q}</div>", unsafe_allow_html=True)
                     with r2:
                         val = st.radio(f"q_{q}", [1,2,3,4,5], horizontal=True, label_visibility="collapsed", key=f"q_{q}", index=None)
