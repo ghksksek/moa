@@ -30,7 +30,8 @@ st.markdown("""
         padding: 10px 5px !important; margin: 0 auto !important;
     }
 
-    /* 2. 버튼 스타일 */
+/* 2. 버튼 스타일 */
+    /* (1) 일반 버튼 */
     .stButton > button {
         border: 1px solid #cccccc !important; 
         color: #666 !important;
@@ -43,6 +44,8 @@ st.markdown("""
         border: 1px solid #999 !important;
         color: #333 !important;
     }
+
+    /* (2) 시험 시작 버튼 (Primary Type) */
     .stButton > button[kind="primary"] {
         border: 2px solid #333 !important;
         background-color: #333 !important;
@@ -52,6 +55,28 @@ st.markdown("""
     .stButton > button[kind="primary"]:hover {
         background-color: black !important;
         border-color: black !important;
+    }
+
+    /* (3) [수정됨] 채점하기 버튼 (Form Submit) - 가장 강력하게 적용 */
+    div[data-testid="stFormSubmitButton"] button {
+        background-color: #333 !important;
+        border: 2px solid #333 !important;
+        color: white !important;
+        margin-top: 5px !important;
+        font-weight: bold !important;
+    }
+    
+    div[data-testid="stFormSubmitButton"] button:hover {
+        background-color: black !important;
+        border-color: black !important;
+        color: white !important;
+    }
+    
+    div[data-testid="stFormSubmitButton"] button:active,
+    div[data-testid="stFormSubmitButton"] button:focus {
+        background-color: #333 !important;
+        border-color: #333 !important;
+        color: white !important;
     }
 
     /* 3. 정보 박스 */
